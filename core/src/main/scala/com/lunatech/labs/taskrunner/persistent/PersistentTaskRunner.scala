@@ -97,7 +97,7 @@ class PersistentTaskRunner[A: Task](taskStore: TaskStore[A], retryStrategy: Retr
 }
 
 object PersistentTaskRunner {
-  sealed trait StoreException
+  sealed trait StoreException extends Throwable
   case class MarkBusyException[A](taskId: A, exception: Throwable) extends StoreException
   case class MarkFailedException[A](taskId: A, exception: Throwable) extends StoreException
   case class UnregisterException[A](taskId: A, exception: Throwable) extends StoreException
