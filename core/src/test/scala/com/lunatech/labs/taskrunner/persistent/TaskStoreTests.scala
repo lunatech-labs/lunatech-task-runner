@@ -59,6 +59,18 @@ abstract class TaskStoreTests extends Specification {
       taskStore.listBusy must haveSize[ListType[taskStore.Id]](0).await
       taskStore.listRetryable must haveSize[ListType[taskStore.Id]](0).await
     }
+
+    "return the correct number of times a task has been tried if a task failed multiple times" in runWithStore { taskStore =>
+      val triedF = for {
+        taskId <- taskStore.register(generateTask)
+        _ <- taskStore.markFailed(taskId, new RuntimeException("Foo!"), Some(new Timestamp((new Date).getTime)))
+        _ <- taskStore.markFailed(taskId, new RuntimeException("Foo!"), Some(new Timestamp((new Date).getTime)))
+        _ <- taskStore.markFailed(taskId, new RuntimeException("Foo!"), Some(new Timestamp((new Date).getTime)))
+        tasks <- taskStore.listRetryable
+      } yield tasks.head.tried
+
+      triedF must beEqualTo(3).await
+    }
   }
 
 }

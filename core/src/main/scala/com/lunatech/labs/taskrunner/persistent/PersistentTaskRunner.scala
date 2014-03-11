@@ -34,20 +34,20 @@ class PersistentTaskRunner[A: Task](taskStore: TaskStore[A], retryStrategy: Retr
     }
   }
 
-  private def execute(task: A, taskId: taskStore.Id, retries: Int): Unit =
+  private def execute(task: A, taskId: taskStore.Id, tried: Int): Unit =
     implicitly[Task[A]].run(task) onComplete {
       case Success(_) ⇒
         taskStore.unregister(taskId).onFailure {
           case exception ⇒ onStoreException(PersistentTaskRunner.UnregisterException(taskId, exception))
         }
-      case Failure(exception) ⇒ handleTaskException(task, taskId: taskStore.Id, retries, exception)
+      case Failure(exception) ⇒ handleTaskException(task, taskId: taskStore.Id, tried, exception)
     }
 
-  private def handleTaskException(task: A, taskId: taskStore.Id, retries: Int, exception: Throwable) = {
-    retryStrategy.nextRetryDelay(task, retries, exception) match {
+  private def handleTaskException(task: A, taskId: taskStore.Id, tried: Int, exception: Throwable) = {
+    retryStrategy.nextRetryDelay(task, tried + 1, exception) match {
       case Some(delay) ⇒ {
         taskStore.markFailed(taskId, exception, Some(timestampAfter(delay))) onComplete {
-          case Success(_) ⇒ scheduleTask(task, taskId, delay, retries + 1)
+          case Success(_) ⇒ scheduleTask(task, taskId, delay, tried + 1)
           case Failure(ex) ⇒ onStoreException(PersistentTaskRunner.MarkFailedException(taskId, exception))
         }
       }
@@ -60,10 +60,10 @@ class PersistentTaskRunner[A: Task](taskStore: TaskStore[A], retryStrategy: Retr
     }
   }
 
-  private def scheduleTask(task: A, taskId: taskStore.Id, delay: FiniteDuration, retries: Int): Unit = {
+  private def scheduleTask(task: A, taskId: taskStore.Id, delay: FiniteDuration, tried: Int): Unit = {
     scheduler.scheduleOnce(delay) {
       taskStore.markBusy(taskId).onComplete {
-        case Success(_) ⇒ execute(task, taskId, retries)
+        case Success(_) ⇒ execute(task, taskId, tried)
         case Failure(exception) ⇒ onStoreException(PersistentTaskRunner.MarkBusyException(taskId, exception))
       }
     }
@@ -78,7 +78,7 @@ class PersistentTaskRunner[A: Task](taskStore: TaskStore[A], retryStrategy: Retr
     val retryable = Await.result(taskStore.listRetryable, Duration(1, "minute"))
 
     busy.foreach { registeredTask =>
-      handleTaskException(registeredTask.task, registeredTask.id, registeredTask.retries, PersistentTaskRunner.TaskInterruptedException)
+      handleTaskException(registeredTask.task, registeredTask.id, registeredTask.tried, PersistentTaskRunner.TaskInterruptedException)
     }
 
     val now = new Timestamp((new Date).getTime())
@@ -86,10 +86,10 @@ class PersistentTaskRunner[A: Task](taskStore: TaskStore[A], retryStrategy: Retr
       registeredTask.nextTry.foreach { nextTry =>
         val waitTime = nextTry.getTime - now.getTime
         if (waitTime < 0) {
-          handleTaskException(registeredTask.task, registeredTask.id, registeredTask.retries, PersistentTaskRunner.ScheduleMissedException(nextTry))
+          handleTaskException(registeredTask.task, registeredTask.id, registeredTask.tried, PersistentTaskRunner.ScheduleMissedException(nextTry))
         } else {
           val delay = Duration(waitTime, "milliseconds")
-          scheduleTask(registeredTask.task, registeredTask.id, delay, registeredTask.retries)
+          scheduleTask(registeredTask.task, registeredTask.id, delay, registeredTask.tried)
         }
       }
     }

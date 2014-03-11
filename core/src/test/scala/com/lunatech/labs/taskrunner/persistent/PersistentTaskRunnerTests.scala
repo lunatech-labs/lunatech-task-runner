@@ -57,8 +57,8 @@ class PersistentTaskRunnerTests extends TaskRunnerTests {
       val strategy = mock[RetryStrategy[Any]]
       val task = getTask(() ⇒ throw exception)
 
-      strategy.nextRetryDelay(any, Matchers.eq(0), Matchers.eq(exception)) returns Some(Duration(0, "seconds"))
-      strategy.nextRetryDelay(any, Matchers.eq(1), Matchers.eq(exception)) returns None
+      strategy.nextRetryDelay(any, Matchers.eq(1), Matchers.eq(exception)) returns Some(Duration(0, "seconds"))
+      strategy.nextRetryDelay(any, Matchers.eq(2), Matchers.eq(exception)) returns None
 
       val taskRunner = new PersistentTaskRunner(taskStore, strategy)
 
@@ -147,7 +147,7 @@ class PersistentTaskRunnerTests extends TaskRunnerTests {
       retryStrategy.nextRetryDelay(any, any, any) returns None
       val taskRunner = new PersistentTaskRunner(taskStore, retryStrategy)
 
-      there was one(retryStrategy).nextRetryDelay(any, Matchers.eq(0), Matchers.eq(PersistentTaskRunner.ScheduleMissedException(scheduledTime)))
+      there was one(retryStrategy).nextRetryDelay(any, Matchers.eq(2), Matchers.eq(PersistentTaskRunner.ScheduleMissedException(scheduledTime)))
 
       Thread.sleep(500)
       completed must_== false
@@ -166,7 +166,7 @@ class PersistentTaskRunnerTests extends TaskRunnerTests {
       retryStrategy.nextRetryDelay(any, any, any) returns None
       val taskRunner = new PersistentTaskRunner(taskStore, retryStrategy)
 
-      there was one(retryStrategy).nextRetryDelay(any, Matchers.eq(0), Matchers.eq(PersistentTaskRunner.TaskInterruptedException))
+      there was one(retryStrategy).nextRetryDelay(any, Matchers.eq(1), Matchers.eq(PersistentTaskRunner.TaskInterruptedException))
 
       Thread.sleep(500)
       completed must_== false

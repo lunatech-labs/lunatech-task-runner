@@ -29,7 +29,7 @@ class MySQLTaskStore[A](serialize: A ⇒ (String, String), deserialize: (String,
       val (taskType, taskIdentifier) = serialize(task)
       val busy = tryAt.isEmpty
       val lastRun = if (busy) Some(now) else None
-      val record = Record(0, taskType, taskIdentifier, busy, retries = 0, nextTry = tryAt, lastRun = lastRun)
+      val record = Record(0, taskType, taskIdentifier, busy, tried = 0, nextTry = tryAt, lastRun = lastRun)
       val insertedRecord = TaskSchema.tasks.insert(record)
       insertedRecord.id
     }
@@ -46,10 +46,11 @@ class MySQLTaskStore[A](serialize: A ⇒ (String, String), deserialize: (String,
 
   override def markFailed(id: Long, exception: Throwable, nextTry: Option[Timestamp]): Future[Unit] = syncFuture {
     transaction {
-      TaskSchema.tasks.update(task ⇒
+      val changed = TaskSchema.tasks.update(task ⇒
         where(task.id === id)
           set (
             task.busy := false,
+            task.tried := task.tried.~ + 1,
             task.nextTry := nextTry,
             task.lastExceptionMessage := Option(exception.getMessage),
             task.lastExceptionStackTrace := Option(exception.getStackTraceString)))
@@ -93,7 +94,7 @@ class MySQLTaskStore[A](serialize: A ⇒ (String, String), deserialize: (String,
 
   private def getRegisteredTask(record: Record): RegisteredTask[A, Long] = {
     val task = deserialize(record.taskType, record.taskIdentifier)
-    RegisteredTask(task, record.id, record.busy, record.retries, record.lastExceptionMessage, record.lastExceptionStackTrace, record.nextTry)
+    RegisteredTask(task, record.id, record.busy, record.tried, record.lastExceptionMessage, record.lastExceptionStackTrace, record.nextTry)
   }
 
   /**
@@ -102,12 +103,10 @@ class MySQLTaskStore[A](serialize: A ⇒ (String, String), deserialize: (String,
   private def syncFuture[A](a: => A): Future[A] = try {
     Future.successful(a)
   } catch {
-    case NonFatal(e) => {
-      Future.failed(e)
-    }
+    case NonFatal(e) => Future.failed(e)
   }
 }
 
 object MySQLTaskStore {
-  case class Record(id: Long, taskType: String, taskIdentifier: String, busy: Boolean = false, retries: Int, lastRun: Option[Timestamp], lastExceptionMessage: Option[String] = None, lastExceptionStackTrace: Option[String] = None, nextTry: Option[Timestamp] = None) extends KeyedEntity[Long]
+  case class Record(id: Long, taskType: String, taskIdentifier: String, busy: Boolean = false, tried: Int, lastRun: Option[Timestamp], lastExceptionMessage: Option[String] = None, lastExceptionStackTrace: Option[String] = None, nextTry: Option[Timestamp] = None) extends KeyedEntity[Long]
 }

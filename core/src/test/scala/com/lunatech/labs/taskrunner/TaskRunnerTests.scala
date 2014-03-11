@@ -62,21 +62,21 @@ abstract class TaskRunnerTests extends Specification with TerminationMatchers wi
       there was no(strategy).nextRetryDelay(any, anyInt, any[Throwable])
     }
 
-    "invoke the 'nextRetryDelay' method on the RetryStrategy with the thrown exception and correct number of retries if the task fails" in {
+    "invoke the 'nextRetryDelay' method on the RetryStrategy with the thrown exception and correct number of tries if the task fails" in {
       val strategy = mock[RetryStrategy[T]]
       val taskRunner = getTaskRunner(strategy)
       val exception = new RuntimeException("Foo!")
       val task = getTask(() ⇒ throw exception)
-      strategy.nextRetryDelay(task, 0, exception) returns Some(Duration.Zero)
-      strategy.nextRetryDelay(task, 1, exception) returns None
+      strategy.nextRetryDelay(task, 1, exception) returns Some(Duration.Zero)
+      strategy.nextRetryDelay(task, 2, exception) returns None
 
       taskRunner.runTask(task)
 
       Thread.sleep(1000)
 
-      there was one(strategy).nextRetryDelay(task, 0, exception)
       there was one(strategy).nextRetryDelay(task, 1, exception)
-      there was no(strategy).nextRetryDelay(task, 2, exception)
+      there was one(strategy).nextRetryDelay(task, 2, exception)
+      there was no(strategy).nextRetryDelay(task, 3, exception)
     }
 
     "not retry the task if the RetryStrategy says not to" in {
@@ -102,9 +102,9 @@ abstract class TaskRunnerTests extends Specification with TerminationMatchers wi
         throw exception
       })
 
-      strategy.nextRetryDelay(any, Matchers.eq(0), Matchers.eq(exception)) returns Some(Duration(0, "seconds"))
       strategy.nextRetryDelay(any, Matchers.eq(1), Matchers.eq(exception)) returns Some(Duration(0, "seconds"))
-      strategy.nextRetryDelay(any, Matchers.eq(2), Matchers.eq(exception)) returns None
+      strategy.nextRetryDelay(any, Matchers.eq(2), Matchers.eq(exception)) returns Some(Duration(0, "seconds"))
+      strategy.nextRetryDelay(any, Matchers.eq(3), Matchers.eq(exception)) returns None
 
       taskRunner.runTask(task)
 
@@ -122,8 +122,8 @@ abstract class TaskRunnerTests extends Specification with TerminationMatchers wi
         throw exception
       })
 
-      strategy.nextRetryDelay(any, Matchers.eq(0), Matchers.eq(exception)) returns Some(Duration(1, "seconds"))
-      strategy.nextRetryDelay(any, Matchers.eq(1), Matchers.eq(exception)) returns None
+      strategy.nextRetryDelay(any, Matchers.eq(1), Matchers.eq(exception)) returns Some(Duration(1, "seconds"))
+      strategy.nextRetryDelay(any, Matchers.eq(2), Matchers.eq(exception)) returns None
 
       taskRunner.runTask(task)
 

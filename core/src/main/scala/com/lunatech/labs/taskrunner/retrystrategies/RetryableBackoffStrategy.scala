@@ -11,8 +11,8 @@ import scala.concurrent.duration.FiniteDuration
 class RetryableBackoffStrategy(waitTimes: List[FiniteDuration]) extends RetryStrategy[Any] {
   import RetryableBackoffStrategy._
 
-  override def nextRetryDelay(task: Any, retries: Int, throwable: Throwable) = throwable match {
-    case Retryable(_) => waitTimes.lift(retries)
+  override def nextRetryDelay(task: Any, tried: Int, throwable: Throwable) = throwable match {
+    case Retryable(_) => waitTimes.lift(tried - 1)
     case other => None
   }
 }

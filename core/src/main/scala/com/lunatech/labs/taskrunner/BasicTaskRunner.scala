@@ -19,16 +19,16 @@ class BasicTaskRunner[A: Task](retryStrategy: RetryStrategy[A], onFatalException
     Future.successful(())
   }
 
-  private def execute(task: A, retries: Int): Unit =
+  private def execute(task: A, tried: Int): Unit =
     implicitly[Task[A]].run(task) onFailure { throwable ⇒
-      retryStrategy.nextRetryDelay(task, retries, throwable) match {
-        case Some(delay) ⇒ scheduleTask(task, delay, retries + 1)
+      retryStrategy.nextRetryDelay(task, tried + 1, throwable) match {
+        case Some(delay) ⇒ scheduleTask(task, delay, tried + 1)
         case None ⇒ onFatalException(throwable)
       }
     }
 
-  private def scheduleTask(task: A, delay: FiniteDuration, retries: Int): Unit = {
-    scheduler.scheduleOnce(delay) { execute(task, retries) }
+  private def scheduleTask(task: A, delay: FiniteDuration, tried: Int): Unit = {
+    scheduler.scheduleOnce(delay) { execute(task, tried) }
     ()
   }
 }

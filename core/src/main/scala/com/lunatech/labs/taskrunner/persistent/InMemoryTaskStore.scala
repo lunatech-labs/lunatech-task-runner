@@ -40,7 +40,7 @@ class InMemoryTaskStore[A](implicit ec: ExecutionContext) extends TaskStore[A] {
    */
   def markFailed(id: Id, exception: Throwable, nextTry: Option[Timestamp]): Future[Unit] = synchronized {
     val registeredTask = registry(id)
-    val updatedRegisteredTask = registeredTask.copy(busy = false, nextTry = nextTry, lastExceptionMessage = Some(exception.getMessage), lastExceptionStackTrace = Some(exception.getStackTraceString))
+    val updatedRegisteredTask = registeredTask.copy(busy = false, tried = registeredTask.tried + 1, nextTry = nextTry, lastExceptionMessage = Some(exception.getMessage), lastExceptionStackTrace = Some(exception.getStackTraceString))
     registry = registry + (id -> updatedRegisteredTask)
     Future.successful(())
   }
