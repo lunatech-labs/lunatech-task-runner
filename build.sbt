@@ -4,7 +4,7 @@ lazy val `mysql-job-store` = project.dependsOn(core % "test->test;compile->compi
 
 organization in ThisBuild := "com.lunatech.task-runner"
 
-version in ThisBuild := "0.2"
+version in ThisBuild := "0.3-SNAPSHOT"
 
 publishTo in ThisBuild <<= version { (v: String) =>
   val path = if(v.trim.endsWith("SNAPSHOT")) "snapshots-public" else "releases-public"
