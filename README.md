@@ -12,11 +12,11 @@ In your `build.sbt`:
 
     resolvers += "Lunatech Releases" at "http://artifactory.lunatech.com/artifactory/releases-public/"
     
-    libraryDependencies += "com.lunatech.task-runner" %% "task-runner-core" % "0.1"
+    libraryDependencies += "com.lunatech.task-runner" %% "task-runner-core" % "0.3"
     
 If you want the MySQL Squeryl task store, you can use:
 
-    libraryDependencies += "com.lunatech.task-runner" %% "task-runner-squeryl-mysql-store" % "0.1"
+    libraryDependencies += "com.lunatech.task-runner" %% "task-runner-squeryl-mysql-store" % "0.3"
 
 Problem description
 -------------------
