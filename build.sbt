@@ -4,7 +4,7 @@ lazy val `mysql-job-store` = project.dependsOn(core % "test->test;compile->compi
 
 organization in ThisBuild := "com.lunatech.task-runner"
 
-version in ThisBuild := "0.3"
+version in ThisBuild := "0.4-SNAPSHOT"
 
 scalaVersion := "2.11.4"
 
