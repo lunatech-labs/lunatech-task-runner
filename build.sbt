@@ -6,6 +6,8 @@ organization in ThisBuild := "com.lunatech.task-runner"
 
 version in ThisBuild := "0.3-SNAPSHOT"
 
+scalaVersion := "2.11.4"
+
 publishTo in ThisBuild <<= version { (v: String) =>
   val path = if(v.trim.endsWith("SNAPSHOT")) "snapshots-public" else "releases-public"
   Some(Resolver.url("Lunatech Artifactory", new URL("http://artifactory.lunatech.com/artifactory/%s/" format path)))

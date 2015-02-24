@@ -7,7 +7,8 @@ import java.util.Date
 import org.squeryl.KeyedEntity
 import org.squeryl.PrimitiveTypeMode._
 import org.squeryl.Schema
-import scala.concurrent.{ExecutionContext, Future}
+import scala.compat.Platform.EOL
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 
 class MySQLTaskStore[A](serialize: A ⇒ (String, String), deserialize: (String, String) ⇒ A)(implicit ec: ExecutionContext) extends TaskStore[A] {
@@ -18,10 +19,10 @@ class MySQLTaskStore[A](serialize: A ⇒ (String, String), deserialize: (String,
   object TaskSchema extends Schema {
     val tasks = table[Record]
 
-    on(tasks) (task => declare(
+    on(tasks)(task => declare(
       task.id is (autoIncremented),
-      task.lastExceptionMessage is(dbType("text")),
-      task.lastExceptionStackTrace is(dbType("text"))))
+      task.lastExceptionMessage is (dbType("text")),
+      task.lastExceptionStackTrace is (dbType("text"))))
   }
 
   override def register(task: A, tryAt: Option[Timestamp] = None) = syncFuture {
@@ -53,7 +54,7 @@ class MySQLTaskStore[A](serialize: A ⇒ (String, String), deserialize: (String,
             task.tried := task.tried.~ + 1,
             task.nextTry := nextTry,
             task.lastExceptionMessage := Option(exception.getMessage),
-            task.lastExceptionStackTrace := Option(exception.getStackTraceString)))
+            task.lastExceptionStackTrace := Option(exception.getStackTrace.mkString("", EOL, EOL))))
     }
     ()
   }
@@ -100,8 +101,8 @@ class MySQLTaskStore[A](serialize: A ⇒ (String, String), deserialize: (String,
   /**
    * Create a future from a synchronous computation. Async future's might not work well with Squeryl's threadlocal sessions
    */
-  private def syncFuture[A](a: => A): Future[A] = try {
-    Future.successful(a)
+  private def syncFuture[B](b: => B): Future[B] = try {
+    Future.successful(b)
   } catch {
     case NonFatal(e) => Future.failed(e)
   }
